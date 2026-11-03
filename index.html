@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hipopótamos Comiendo Bolitas</title>
+<style>
+:root{--red:#ff3d58;--blue:#16c9ff;--ink:#07132e}
+*{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at 50% 10%,#153f9b,#07112d 65%,#030817);color:white;font-family:system-ui,Segoe UI,Arial;min-height:100vh;display:grid;place-items:center;padding:16px}
+.app{width:min(1200px,100%)} header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+h1{margin:0;font-size:clamp(24px,4vw,46px);line-height:1;font-weight:1000;letter-spacing:-1.5px;text-shadow:0 4px 0 #07102c,0 0 22px #00c8ff66}
+h1 span{color:#ffdc42}.sub{color:#b9d9ff;font-size:12px;letter-spacing:2px;font-weight:800}
+.topbtn,button{border:1px solid #6eabff66;color:white;background:#10285b;padding:10px 16px;border-radius:12px;font-weight:900;cursor:pointer;box-shadow:0 5px 0 #050c20;transition:.12s}
+button:hover,.topbtn:hover{filter:brightness(1.2);transform:translateY(-1px)}button:active{transform:translateY(3px);box-shadow:0 2px 0 #050c20}
+.scores{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;margin-bottom:12px}
+.score{padding:10px 16px;border-radius:16px;background:linear-gradient(145deg,#182e5c,#091735);border:2px solid #ffffff24;display:flex;justify-content:space-between;align-items:center;box-shadow:0 8px 22px #0005}
+.score.red{border-color:#ff3d5877}.score.blue{border-color:#16c9ff77}.name{font-weight:1000;letter-spacing:1px}.red .name{color:#ff6578}.blue .name{color:#52ddff}.num{font-size:clamp(30px,5vw,48px);font-weight:1000;line-height:1;font-variant-numeric:tabular-nums}
+.timer{font-size:clamp(24px,4vw,38px);font-weight:1000;color:#ffdf59;text-shadow:0 0 18px #ffbd37aa;text-align:center;min-width:90px}
+.stage{position:relative;border:5px solid #5b9eff;border-radius:30px;padding:10px;background:linear-gradient(145deg,#0d2864,#071333);box-shadow:0 0 0 4px #09142d,0 0 40px #00baff55,inset 0 0 35px #00baff22;overflow:hidden}
+canvas{width:100%;height:auto;display:block;border-radius:20px;background:radial-gradient(ellipse,#1685ce,#07508f 60%,#082b65)}
+.overlay{position:absolute;inset:10px;display:grid;place-items:center;background:#04102bdc;border-radius:20px;text-align:center;padding:20px}
+.panel{max-width:550px}.panel h2{font-size:clamp(30px,6vw,56px);margin:0 0 8px;text-shadow:0 4px #07132e}.panel p{color:#c7e5ff;line-height:1.5}.big{font-size:20px;padding:14px 28px;background:linear-gradient(135deg,#ff3d58,#c31949);border:0;box-shadow:0 6px 0 #78132f}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.control{border-radius:16px;padding:12px;background:#0b1b3d;border:1px solid #ffffff20;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.control strong{font-size:13px;letter-spacing:1px}.control small{display:block;color:#9fc7ef;margin-top:3px}
+.control.red{border-color:#ff3d5866}.control.blue{border-color:#16c9ff66}
+.press{min-width:145px;font-size:13px;padding:12px}.press.red{background:linear-gradient(135deg,#ff526b,#b91d40)}.press.blue{background:linear-gradient(135deg,#21d4ff,#075bbd)}
+footer{text-align:center;color:#86a8d7;font-size:11px;margin-top:12px}
+@media(max-width:650px){.scores{gap:6px}.score{padding:8px}.name{font-size:11px}.controls{grid-template-columns:1fr}.control{padding:9px}.stage{padding:6px;border-radius:20px}}
+</style>
+</head>
+<body><main class="app">
+<header><div><div class="sub">ARCADE • 2 JUGADORES</div><h1>HIPOPÓTAMOS <span>COMIENDO BOLITAS</span></h1></div><button class="topbtn" id="settings">⚙ CONFIGURACIÓN</button></header>
+<section class="scores">
+<div class="score red"><span class="name">🔴 JUGADOR 1</span><span class="num" id="s1">00</span></div>
+<div class="timer" id="timer">60</div>
+<div class="score blue"><span class="name">🔵 JUGADOR 2</span><span class="num" id="s2">00</span></div>
+</section>
+<div class="stage"><canvas id="game" width="1100" height="620"></canvas>
+<div class="overlay" id="overlay"><div class="panel"><div class="sub">¿ESTÁS LISTO PARA EL DESAFÍO?</div><h2>¡A COMER BOLITAS!</h2><p>Presiona tu botón para lanzar la cabeza y atrapar las bolitas. ¡El que junte más gana!</p><button class="big" id="start">▶ COMENZAR PARTIDA</button><p><small>Jugador 1: ESPACIO / A &nbsp; • &nbsp; Jugador 2: ENTER / L</small></p></div></div>
+</div>
+<div class="controls">
+<div class="control red"><div><strong>🔴 JUGADOR 1</strong><small>ESPACIO o A · Botón rojo</small></div><button class="press red" id="p1">¡COMER! <span>⏵</span></button></div>
+<div class="control blue"><div><strong>🔵 JUGADOR 2</strong><small>ENTER o L · Botón azul</small></div><button class="press blue" id="p2">¡COMER! <span>⏵</span></button></div>
+</div>
+<footer>HIPOPÓTAMOS COMIENDO BOLITAS • PROTOTIPO ARCADE • Hecho para jugar en pantalla grande</footer>
+</main>
+<script>
+const c=document.getElementById('game'),ctx=c.getContext('2d'),$=id=>document.getElementById(id);
+let balls=[],scores=[0,0],time=60,playing=false,ends=0,heads=[0,0],last=0,settings={duration:60};
+const colors=['#ffe34f','#ff4f79','#48f09a','#ff9d35','#72e7ff','#d77cff'];
+function reset(){balls=[];for(let i=0;i<30;i++)balls.push({x:150+Math.random()*800,y:90+Math.random()*440,r:10+Math.random()*5,color:colors[i%colors.length],vx:(Math.random()-.5)*1.2,vy:(Math.random()-.5)*1.2});scores=[0,0];time=settings.duration;heads=[0,0];updateUI()}
+function updateUI(){$('s1').textContent=String(scores[0]).padStart(2,'0');$('s2').textContent=String(scores[1]).padStart(2,'0');$('timer').textContent=time}
+function eat(i){if(!playing)return;heads[i]=1;let hipX=i===0?170:930,hipY=310;let candidates=balls.map((b,n)=>({n,d:Math.hypot(b.x-hipX,b.y-hipY)})).sort((a,b)=>a.d-b.d).slice(0,3);let eaten=0;for(let item of candidates){if(item.d<360&&balls[item.n]){balls.splice(item.n,1);scores[i]++;eaten++;}}if(eaten===0){let b=balls.shift();if(b){scores[i]++;}}while(balls.length<30)balls.push({x:350+Math.random()*400,y:100+Math.random()*420,r:12,color:colors[Math.floor(Math.random()*colors.length)],vx:(Math.random()-.5)*2,vy:(Math.random()-.5)*2});updateUI();setTimeout(()=>heads[i]=0,180)}
+function drawHippo(x,y,color,flip,open){ctx.save();ctx.translate(x,y);if(flip)ctx.scale(-1,1);
+ctx.shadowColor=color;ctx.shadowBlur=22;ctx.fillStyle=color;ctx.strokeStyle='#07142d';ctx.lineWidth=12;
+ctx.beginPath();ctx.ellipse(0,0,105,88,0,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.shadowBlur=0;
+ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(25,-28,22,26,0,0,Math.PI*2);ctx.ellipse(65,-25,22,26,0,0,Math.PI*2);ctx.fill();
+ctx.fillStyle='#111b38';ctx.beginPath();ctx.arc(31,-25,10,0,7);ctx.arc(71,-22,10,0,7);ctx.fill();
+ctx.fillStyle='#ffb4bd';ctx.beginPath();ctx.ellipse(38,28,55,30+(open?23:0),0,0,Math.PI*2);ctx.fill();ctx.stroke();
+ctx.fillStyle='#14203d';ctx.beginPath();ctx.ellipse(5,38,12,8,0,0,7);ctx.ellipse(76,38,12,8,0,0,7);ctx.fill();
+ctx.fillStyle='#fff';ctx.font='bold 22px system-ui';ctx.textAlign='center';ctx.fillText(flip?'2':'1',38,125);ctx.restore()}
+function draw(t){ctx.clearRect(0,0,1100,620);
+let g=ctx.createRadialGradient(550,310,40,550,310,580);g.addColorStop(0,'#19a9e9');g.addColorStop(1,'#063b80');ctx.fillStyle=g;ctx.fillRect(0,0,1100,620);
+ctx.strokeStyle='#9beaff';ctx.lineWidth=9;ctx.globalAlpha=.5;ctx.beginPath();ctx.ellipse(550,310,460,255,0,0,7);ctx.stroke();ctx.globalAlpha=1;
+for(let b of balls){b.x+=b.vx;b.y+=b.vy;if(b.x<45||b.x>1055)b.vx*=-1;if(b.y<35||b.y>585)b.vy*=-1;ctx.shadowColor=b.color;ctx.shadowBlur=15;let gr=ctx.createRadialGradient(b.x-4,b.y-5,1,b.x,b.y,b.r);gr.addColorStop(0,'#fff');gr.addColorStop(.25,b.color);gr.addColorStop(1,'#17406c');ctx.fillStyle=gr;ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,7);ctx.fill();ctx.shadowBlur=0}
+drawHippo(150,310,'#ff405b',false,heads[0]);drawHippo(950,310,'#12c9ff',true,heads[1]);
+ctx.fillStyle='#ffffff22';ctx.fillRect(525,35,50,550);ctx.fillStyle='#fff';ctx.font='900 22px system-ui';ctx.textAlign='center';ctx.fillText('¡A COMER!',550,40);
+if(playing){let now=performance.now();if(now-last>=1000){time--;last=now;updateUI();if(time<=0)finish()}}
+requestAnimationFrame(draw)}
+function finish(){playing=false;let winner=scores[0]===scores[1]?'¡EMPATE!':scores[0]>scores[1]?'¡GANA JUGADOR 1!':'¡GANA JUGADOR 2!';$('overlay').innerHTML=`<div class="panel"><div class="sub">FIN DE LA PARTIDA</div><h2>${winner}</h2><p>🔴 ${scores[0]} bolitas &nbsp; VS &nbsp; 🔵 ${scores[1]} bolitas</p><button class="big" id="again">↻ JUGAR OTRA VEZ</button></div>`;$('overlay').style.display='grid';$('again').onclick=startGame}
+function startGame(){reset();playing=true;last=performance.now();$('overlay').style.display='none'}
+$('start').onclick=startGame;$('p1').onclick=()=>eat(0);$('p2').onclick=()=>eat(1);
+window.addEventListener('keydown',e=>{if(e.repeat)return;if([' ','a','A'].includes(e.key)){e.preventDefault();eat(0)}if(['Enter','l','L'].includes(e.key)){e.preventDefault();eat(1)}if(e.key==='Escape'&&playing){playing=false;$('overlay').style.display='grid';$('overlay').innerHTML='<div class="panel"><h2>PARTIDA EN PAUSA</h2><button class="big" id="resume">CONTINUAR</button></div>';$('resume').onclick=()=>{playing=true;last=performance.now();$('overlay').style.display='none'}}});
+$('settings').onclick=()=>{let v=prompt('Duración de la partida en segundos (30, 60, 90 o 120):',settings.duration);if(v!==null){let n=Number(v);if([30,60,90,120].includes(n)){settings.duration=n;time=n;updateUI()}else alert('Elige 30, 60, 90 o 120 segundos.')}};
+reset();requestAnimationFrame(draw);
+</script></body></html>
