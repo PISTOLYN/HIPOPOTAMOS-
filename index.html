@@ -151,6 +151,35 @@ function drawTube(x,color,count,flip){
  ctx.restore();
  ctx.save();ctx.fillStyle='#fff';ctx.font='1000 19px system-ui';ctx.textAlign='center';ctx.shadowColor=color;ctx.shadowBlur=12;ctx.fillText(String(count),x,530);ctx.restore();
 }
+function neckAmount(pressAt){
+ const elapsed=pressAt?performance.now()-pressAt:99999;
+ if(elapsed<190){const p=elapsed/190;return 1-Math.pow(1-p,3)}
+ if(elapsed<330)return 1;
+ if(elapsed<690){const p=(elapsed-330)/360;return 1-(p*p*(3-2*p))}
+ return 0;
+}
+function drawNeck(side,pressAt){
+ const amount=neckAmount(pressAt);if(amount<=0)return;
+ const red=side===0,baseX=red?286:814,baseY=416;
+ const length=(red?205:205)*amount;
+ const tipX=baseX+(red?length:-length),tipY=baseY-12*amount;
+ const fill=red?'#ed7897':'#68d9f2',edge=red?'#8d3458':'#176b9c';
+ ctx.save();
+ ctx.shadowColor=red?'#ff5278':'#20d9ff';ctx.shadowBlur=18;
+ const grad=ctx.createLinearGradient(baseX,baseY,tipX,tipY);
+ grad.addColorStop(0,fill);grad.addColorStop(.55,red?'#f8a4b8':'#a1efff');grad.addColorStop(1,red?'#d94d76':'#39b8e4');
+ ctx.fillStyle=grad;ctx.strokeStyle=edge;ctx.lineWidth=5;ctx.lineJoin='round';
+ const sign=red?1:-1;
+ ctx.beginPath();
+ ctx.moveTo(baseX-sign*10,baseY-28);
+ ctx.bezierCurveTo(baseX+sign*length*.22,baseY-48,baseX+sign*length*.68,tipY-30,tipX,tipY-17);
+ ctx.quadraticCurveTo(tipX+sign*15,tipY,tipX,tipY+18);
+ ctx.bezierCurveTo(baseX+sign*length*.62,tipY+29,baseX+sign*length*.2,baseY+1,baseX-sign*10,baseY+25);
+ ctx.closePath();ctx.fill();ctx.stroke();
+ ctx.globalAlpha=.42;ctx.strokeStyle='#fff';ctx.lineWidth=5;ctx.beginPath();
+ ctx.moveTo(baseX,baseY-17);ctx.quadraticCurveTo(baseX+sign*length*.48,baseY-28,tipX-sign*5,tipY-8);ctx.stroke();
+ ctx.restore();
+}
 function drawHippo(x,y,color,flip,open){ctx.save();ctx.translate(x,y);if(flip)ctx.scale(-1,1);ctx.shadowColor=color;ctx.shadowBlur=25;ctx.fillStyle=color;ctx.strokeStyle='#07142d';ctx.lineWidth=15;ctx.lineCap='round';ctx.lineJoin='round';
 ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(-22,-34,27,31,0,0,Math.PI*2);ctx.ellipse(32,-36,27,31,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#10203d';ctx.beginPath();ctx.arc(-15,-31,12,0,Math.PI*2);ctx.arc(38,-32,12,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(-19,-36,4,0,Math.PI*2);ctx.arc(34,-37,4,0,Math.PI*2);ctx.fill();
 ctx.fillStyle='#ffb6c2';ctx.beginPath();ctx.ellipse(24,35,76,open?47:34,0,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle='#15213d';ctx.beginPath();ctx.ellipse(-32,48,13,9,0,0,Math.PI*2);ctx.ellipse(78,48,13,9,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.font='900 19px system-ui';ctx.textAlign='center';ctx.fillText(flip?'2':'1',0,133);ctx.restore()}
@@ -162,8 +191,10 @@ if(playing&&performance.now()-lastGold>1800){lastGold=performance.now();if(Math.
 balls=balls.filter(b=>!b.gold||performance.now()<b.expires);
 for(let b of balls){b.x+=b.vx+(playing&&settings.windEnabled?wind*.35:0);b.y+=b.vy;if(b.x<80||b.x>1020)b.vx*=-1;if(b.y<40||b.y>570){b.y=45;b.vy=1+Math.random()*1.5}ctx.shadowColor=b.gold?'#ffdc32':b.color;ctx.shadowBlur=b.gold?30:17;let gr=ctx.createRadialGradient(b.x-5,b.y-6,1,b.x,b.y,b.r);gr.addColorStop(0,'#fff');gr.addColorStop(.25,b.gold?'#fff3a0':b.color);gr.addColorStop(1,b.gold?'#d58b00':'#17406c');ctx.fillStyle=gr;ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);ctx.fill();if(b.gold){ctx.fillStyle='#fff';ctx.font='bold 13px system-ui';ctx.textAlign='center';ctx.fillText('★',b.x,b.y+5)}ctx.shadowBlur=0}
 drawTube(45,'#ff4967',tubeBalls[0],false);drawTube(1055,'#20d8ff',tubeBalls[1],true);
-const redShown=drawArtwork(hippoRedArt,hippoRedClosedArt,75,270,350,285,false,heads[0]);if(!redShown)drawHippo(150,315,'#ff405b',false,heads[0]);
-const blueShown=drawArtwork(hippoBlueArt,hippoBlueClosedArt,675,270,350,285,false,heads[1]);if(!blueShown)drawHippo(950,315,'#12c9ff',true,heads[1]);
+// Los personajes quedan más atrás, pegados a sus respectivos extremos.
+drawNeck(0,heads[0]);drawNeck(1,heads[1]);
+const redShown=drawArtwork(hippoRedArt,hippoRedClosedArt,8,292,310,252,false,heads[0]);if(!redShown)drawHippo(115,335,'#ff405b',false,heads[0]);
+const blueShown=drawArtwork(hippoBlueArt,hippoBlueClosedArt,782,292,310,252,false,heads[1]);if(!blueShown)drawHippo(985,335,'#12c9ff',true,heads[1]);
 // Letrero LED desplazándose continuamente hacia la izquierda.
 const ledText=settings.marqueeText||'¡COME MÁS RÁPIDO!';
 ctx.save();ctx.fillStyle='#071126';ctx.fillRect(205,14,690,58);ctx.strokeStyle='#ffdf45';ctx.lineWidth=3;ctx.shadowColor='#ffdc35';ctx.shadowBlur=15;ctx.strokeRect(205,14,690,58);ctx.beginPath();ctx.rect(210,18,680,50);ctx.clip();ctx.font='1000 31px system-ui';ctx.textAlign='left';ctx.fillStyle='#ffec67';ctx.shadowColor='#ffb900';ctx.shadowBlur=16;const tw=ctx.measureText(ledText).width;marqueeX-=settings.marqueeSpeed*.45;if(marqueeX+tw<210)marqueeX=890;ctx.fillText(ledText,marqueeX,53);ctx.restore();
