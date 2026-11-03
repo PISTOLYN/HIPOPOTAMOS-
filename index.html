@@ -94,11 +94,12 @@ function drawArtwork(openImg,closedImg,x,y,w,h,flip,pressAt){
  const pulse=elapsed<130?elapsed/130:elapsed<390?1-(elapsed-130)/260:0;
  const img=(pulse>0.28&&closedImg.complete&&closedImg.naturalWidth)?closedImg:openImg;
  if(!img.complete||!img.naturalWidth)return false;
- const extra=Math.max(0,Math.min(1,pulse))*48;
+ const extra=Math.max(0,Math.min(1,pulse))*145;
  const dw=w+extra, dh=h;
  ctx.save();
- if(flip){ctx.translate(x+w,y);ctx.scale(-1,1);ctx.drawImage(img,0,0,dw,dh)}
- else ctx.drawImage(img,x,y,dw,dh);
+ // El hipopótamo izquierdo se extiende hacia la derecha y el derecho hacia la izquierda.
+ const dx=(x>500)?x-extra:x;
+ ctx.drawImage(img,dx,y,dw,dh);
  ctx.restore();return true;
 }
 let balls=[],flyBalls=[],scores=[0,0],tubeBalls=[0,0],time=60,playing=false,ends=0,heads=[0,0],last=0,wind=0,windUntil=0,goldUntil=0,lastGold=0,marqueeX=1100,capturingKey=0,settings={duration:60,goldChance:.22,goldLife:3,windEnabled:true,musicEnabled:false,sfxEnabled:true,musicVolume:35,sfxVolume:75,customMusic:null,customSounds:{},marqueeText:'¡COME MÁS RÁPIDO!',marqueeSpeed:4,keyP1:' ',keyP2:'Enter'};
@@ -107,7 +108,32 @@ function randomTeam(){return Math.random()<.5?'red':'blue'}
 function ballColor(team){return teamColors[team]||teamColors.red}
 function reset(){balls=[];flyBalls=[];for(let i=0;i<30;i++){const team=randomTeam();balls.push({x:150+Math.random()*800,y:90+Math.random()*440,r:10+Math.random()*5,color:ballColor(team),team,vx:(Math.random()-.5)*1.2,vy:(Math.random()-.5)*1.2,gold:false})}scores=[0,0];tubeBalls=[0,0];time=settings.duration;heads=[0,0];wind=0;goldUntil=0;lastGold=performance.now();updateUI()}
 function updateUI(){$('s1').textContent=String(scores[0]).padStart(2,'0');$('s2').textContent=String(scores[1]).padStart(2,'0');$('timer').textContent=time}
-function eat(i){if(!playing)return;heads[i]=performance.now();playSound('launch');const myTeam=i===0?'red':'blue';const mouthX=i===0?330:770;const candidates=balls.map((b,n)=>({n,d:Math.hypot(b.x-mouthX,b.y-310)})).filter(o=>o.d<255).sort((a,b)=>a.d-b.d).slice(0,6);let gained=0,stored=0;for(const item of candidates){const b=balls[item.n];if(!b)continue;if(b.gold){gained+=5;playSound('gold');flyBalls.push({x:b.x,y:b.y,fromX:b.x,fromY:b.y,toX:i===0?45:1055,toY:470,r:b.r,color:'#ffd83d',gold:true,start:performance.now(),duration:650})}else if(b.team===myTeam){gained++;stored++;flyBalls.push({x:b.x,y:b.y,fromX:b.x,fromY:b.y,toX:i===0?45:1055,toY:470,r:b.r,color:b.color,gold:false,start:performance.now(),duration:720})}balls[item.n]=null;}balls=balls.filter(Boolean);if(gained===0)playSound('miss');else playSound('catch');scores[i]+=gained;tubeBalls[i]+=stored;while(balls.length<30)spawnBall();updateUI()}
+function eat(i){
+ if(!playing)return;
+ heads[i]=performance.now();playSound('launch');
+ const myTeam=i===0?'red':'blue';
+ // Siempre tomar hasta seis bolitas cercanas al hipopótamo; así el botón nunca falla por distancia.
+ const mouthX=i===0?330:770;
+ const candidates=balls.map((b,n)=>({n,d:Math.hypot(b.x-mouthX,b.y-310)}))
+   .sort((a,b)=>a.d-b.d).slice(0,6);
+ let gained=0,stored=0;
+ for(const item of candidates){
+   const b=balls[item.n];if(!b)continue;
+   if(b.gold){
+     gained+=5;playSound('gold');
+     flyBalls.push({fromX:b.x,fromY:b.y,toX:i===0?45:1055,toY:500,r:Math.max(13,b.r),color:'#ffd83d',gold:true,start:performance.now(),duration:1050});
+   }else if(b.team===myTeam){
+     gained++;stored++;
+     flyBalls.push({fromX:b.x,fromY:b.y,toX:i===0?45:1055,toY:500,r:Math.max(13,b.r),color:b.color,gold:false,start:performance.now(),duration:1150});
+   }
+   balls[item.n]=null;
+ }
+ balls=balls.filter(Boolean);
+ if(gained===0)playSound('miss');else playSound('catch');
+ scores[i]+=gained;tubeBalls[i]+=stored;
+ while(balls.length<30)spawnBall();
+ updateUI();
+}
 function spawnBall(){const team=randomTeam();balls.push({x:260+Math.random()*580,y:35,r:11+Math.random()*5,color:ballColor(team),team,vx:(Math.random()-.5)*1.4,vy:1+Math.random()*1.5,gold:false})}
 function playSound(type){if(!settings.sfxEnabled)return;try{if(settings.customSounds&&settings.customSounds[type]){const a=new Audio(settings.customSounds[type]);a.volume=settings.sfxVolume/100;a.play().catch(()=>{});return;}const ac=new (window.AudioContext||window.webkitAudioContext)(),o=ac.createOscillator(),g=ac.createGain();o.connect(g);g.connect(ac.destination);const patterns={launch:[260,.09,'sawtooth'],catch:[620,.12,'sine'],gold:[980,.3,'triangle'],wind:[180,.25,'sawtooth'],win:[740,.45,'triangle'],miss:[130,.1,'square']};const p=patterns[type]||patterns.catch;o.frequency.setValueAtTime(p[0],ac.currentTime);if(type==='gold'||type==='win')o.frequency.exponentialRampToValueAtTime(p[0]*1.7,ac.currentTime+p[1]);g.gain.setValueAtTime((settings.sfxVolume/100)*.18,ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+p[1]);o.type=p[2];o.start();o.stop(ac.currentTime+p[1]);setTimeout(()=>ac.close(),700)}catch(e){}}
 function drawTube(x,color,count,flip){
@@ -140,7 +166,18 @@ const ledText=settings.marqueeText||'¡COME MÁS RÁPIDO!';
 ctx.save();ctx.fillStyle='#071126';ctx.fillRect(205,14,690,58);ctx.strokeStyle='#ffdf45';ctx.lineWidth=3;ctx.shadowColor='#ffdc35';ctx.shadowBlur=15;ctx.strokeRect(205,14,690,58);ctx.beginPath();ctx.rect(210,18,680,50);ctx.clip();ctx.font='1000 31px system-ui';ctx.textAlign='left';ctx.fillStyle='#ffec67';ctx.shadowColor='#ffb900';ctx.shadowBlur=16;const tw=ctx.measureText(ledText).width;marqueeX-=settings.marqueeSpeed*.45;if(marqueeX+tw<210)marqueeX=890;ctx.fillText(ledText,marqueeX,53);ctx.restore();
 // Bolitas capturadas: animación visible hasta caer dentro del frasco correspondiente.
 const nowFly=performance.now();flyBalls=flyBalls.filter(f=>nowFly-f.start<f.duration);
-for(const f of flyBalls){const p=Math.min(1,(nowFly-f.start)/f.duration),ease=1-Math.pow(1-p,3);const xx=f.fromX+(f.toX-f.fromX)*ease, yy=f.fromY+(f.toY-f.fromY)*ease-75*Math.sin(Math.PI*p);ctx.save();ctx.shadowColor=f.gold?'#ffe45c':f.color;ctx.shadowBlur=18;const gr=ctx.createRadialGradient(xx-4,yy-5,1,xx,yy,f.r);gr.addColorStop(0,'#fff');gr.addColorStop(.35,f.gold?'#fff0a0':f.color);gr.addColorStop(1,'#17406c');ctx.fillStyle=gr;ctx.beginPath();ctx.arc(xx,yy,f.r,0,Math.PI*2);ctx.fill();ctx.restore();}
+for(const f of flyBalls){
+ const p=Math.min(1,(nowFly-f.start)/f.duration),ease=p*p*(3-2*p);
+ const xx=f.fromX+(f.toX-f.fromX)*ease;
+ const yy=f.fromY+(f.toY-f.fromY)*ease+24*Math.sin(Math.PI*p);
+ ctx.save();ctx.globalAlpha=p>.92?Math.max(0,(1-p)/.08):1;
+ ctx.shadowColor=f.gold?'#ffe45c':f.color;ctx.shadowBlur=26;
+ ctx.fillStyle=f.color;ctx.strokeStyle='#ffffff';ctx.lineWidth=4;
+ ctx.beginPath();ctx.arc(xx,yy,f.r+2,0,Math.PI*2);ctx.fill();ctx.stroke();
+ ctx.shadowBlur=0;ctx.fillStyle='#ffffff';ctx.beginPath();ctx.arc(xx-f.r*.32,yy-f.r*.34,Math.max(3,f.r*.28),0,Math.PI*2);ctx.fill();
+ if(f.gold){ctx.fillStyle='#7a4b00';ctx.font='bold 16px system-ui';ctx.textAlign='center';ctx.fillText('★',xx,yy+6)}
+ ctx.restore();
+}
 // Cuellos extensibles: se alargan hacia el centro al presionar el botón.
 for(let n=0;n<2;n++){const elapsed=performance.now()-heads[n],pulse=elapsed<150?elapsed/150:elapsed<430?1-(elapsed-150)/280:0;if(pulse>0){const len=270*pulse;ctx.save();ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#07142d';ctx.lineWidth=74;ctx.beginPath();ctx.moveTo(n===0?300:800,390);ctx.lineTo(n===0?300+len:800-len,390);ctx.stroke();ctx.strokeStyle=n===0?'#ff405b':'#12c9ff';ctx.lineWidth=54;ctx.beginPath();ctx.moveTo(n===0?300:800,390);ctx.lineTo(n===0?300+len:800-len,390);ctx.stroke();ctx.restore();}}
 
