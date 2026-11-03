@@ -1,0 +1,50 @@
+{
+  "name": "hipopotamos-comiendo-bolitas",
+  "version": "1.0.0",
+  "description": "Juego arcade de dos jugadores: Hipopotamos Comiendo Bolitas",
+  "main": "main.js",
+  "author": "PISTOLYN",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "electron .",
+    "build:win64": "electron-builder --win nsis --x64",
+    "build:win32": "electron-builder --win nsis --ia32"
+  },
+  "devDependencies": {
+    "electron": "43.0.0",
+    "electron-builder": "26.0.12"
+  },
+  "build": {
+    "appId": "com.pistolyn.hipopotamos",
+    "productName": "Hipopotamos Comiendo Bolitas",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "index.html",
+      "main.js",
+      "package.json"
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "ia32"
+          ]
+        }
+      ],
+      "artifactName": "Hipopotamos-Comiendo-Bolitas-${arch}-Setup.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Hipopotamos Comiendo Bolitas",
+      "deleteAppDataOnUninstall": false
+    }
+  }
+}
