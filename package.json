@@ -23,7 +23,10 @@
     "files": [
       "index.html",
       "main.js",
-      "package.json"
+      "package.json",
+      "Arena de neón futurista.png",
+      "1 ROSA.png",
+      "AZUL.png"
     ],
     "asar": true,
     "win": {
