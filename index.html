@@ -118,8 +118,8 @@ function eat(i){
  for(const item of eligible){
    const ball=item.ball;remove.add(item.index);
    if(ball.gold){gained+=5;playSound('gold');}
-   else {gained++;stored++;jarContents[i].push(ball.color);}
-   flyBalls.push({fromX:ball.x,fromY:ball.y,toX:destination,toY:455,r:Math.max(12,ball.r),color:ball.gold?'#ffd83d':ball.color,gold:!!ball.gold,start:now,duration:900});
+   else {gained++;stored++;}
+   flyBalls.push({fromX:ball.x,fromY:ball.y,toX:destination,toY:455,r:Math.max(12,ball.r),color:ball.gold?'#ffd83d':ball.color,gold:!!ball.gold,storeColor:ball.gold?null:ball.color,player:i,stored:false,start:now,duration:900});
  }
  balls=balls.filter((ball,index)=>!remove.has(index));
  if(gained===0)playSound('miss');else playSound('catch');
@@ -168,7 +168,14 @@ const blueShown=drawArtwork(hippoBlueArt,hippoBlueClosedArt,675,270,350,285,fals
 const ledText=settings.marqueeText||'¡COME MÁS RÁPIDO!';
 ctx.save();ctx.fillStyle='#071126';ctx.fillRect(205,14,690,58);ctx.strokeStyle='#ffdf45';ctx.lineWidth=3;ctx.shadowColor='#ffdc35';ctx.shadowBlur=15;ctx.strokeRect(205,14,690,58);ctx.beginPath();ctx.rect(210,18,680,50);ctx.clip();ctx.font='1000 31px system-ui';ctx.textAlign='left';ctx.fillStyle='#ffec67';ctx.shadowColor='#ffb900';ctx.shadowBlur=16;const tw=ctx.measureText(ledText).width;marqueeX-=settings.marqueeSpeed*.45;if(marqueeX+tw<210)marqueeX=890;ctx.fillText(ledText,marqueeX,53);ctx.restore();
 // Bolitas capturadas: animación visible hasta caer dentro del frasco correspondiente.
-const nowFly=performance.now();flyBalls=flyBalls.filter(f=>nowFly-f.start<f.duration);
+const nowFly=performance.now();
+for(const f of flyBalls){
+ if(!f.stored&&nowFly-f.start>=f.duration){
+  if(f.storeColor)jarContents[f.player].push(f.storeColor);
+  f.stored=true;
+ }
+}
+flyBalls=flyBalls.filter(f=>nowFly-f.start<f.duration);
 for(const f of flyBalls){
  const p=Math.min(1,(nowFly-f.start)/f.duration),ease=p*p*(3-2*p);
  const xx=f.fromX+(f.toX-f.fromX)*ease;
@@ -181,8 +188,7 @@ for(const f of flyBalls){
  if(f.gold){ctx.fillStyle='#7a4b00';ctx.font='bold 16px system-ui';ctx.textAlign='center';ctx.fillText('★',xx,yy+6)}
  ctx.restore();
 }
-// Cuellos extensibles: se alargan hacia el centro al presionar el botón.
-for(let n=0;n<2;n++){const elapsed=performance.now()-heads[n],pulse=elapsed<150?elapsed/150:elapsed<430?1-(elapsed-150)/280:0;if(pulse>0){const len=270*pulse;ctx.save();ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#07142d';ctx.lineWidth=74;ctx.beginPath();ctx.moveTo(n===0?300:800,390);ctx.lineTo(n===0?300+len:800-len,390);ctx.stroke();ctx.strokeStyle=n===0?'#ff405b':'#12c9ff';ctx.lineWidth=54;ctx.beginPath();ctx.moveTo(n===0?300:800,390);ctx.lineTo(n===0?300+len:800-len,390);ctx.stroke();ctx.restore();}}
+// Se eliminó el trazo de cuello artificial: no dibujar rayas sobre la arena.
 
 if(playing&&settings.windEnabled){ctx.font='900 18px system-ui';ctx.fillStyle='#c9f5ff';ctx.fillText('💨 VIENTO LOCO',550,565)}
 if(playing&&performance.now()<goldUntil&&balls.some(b=>b.gold)){ctx.fillStyle='#ffe36b';ctx.font='1000 27px system-ui';ctx.fillText('¡BOLITA DORADA! +5',550,112)}
