@@ -1,0 +1,43 @@
+name: Crear instaladores de Windows
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Windows ${{ matrix.arch }}
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x64, ia32]
+    steps:
+      - name: Descargar codigo
+        uses: actions/checkout@v4
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Instalar dependencias
+        run: npm install
+      - name: Crear instalador
+        shell: pwsh
+        run: |
+          if ("${{ matrix.arch }}" -eq "ia32") {
+            npx electron-builder --win nsis --ia32
+          } else {
+            npx electron-builder --win nsis --x64
+          }
+      - name: Guardar instalador como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: Hipopotamos-Windows-${{ matrix.arch }}
+          path: dist/*.exe
+          if-no-files-found: error
+          retention-days: 30
