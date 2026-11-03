@@ -29,9 +29,9 @@ jobs:
         shell: pwsh
         run: |
           if ("${{ matrix.arch }}" -eq "ia32") {
-            npx electron-builder --win nsis --ia32
+            npx electron-builder --win nsis --ia32 --publish never
           } else {
-            npx electron-builder --win nsis --x64
+            npx electron-builder --win nsis --x64 --publish never
           }
       - name: Guardar instalador como artefacto
         uses: actions/upload-artifact@v4
