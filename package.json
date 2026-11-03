@@ -26,7 +26,9 @@
       "package.json",
       "Arena de neón futurista.png",
       "1 ROSA.png",
-      "AZUL.png"
+      "AZUL.png",
+      "boca cerrada rosa.png",
+      "boca cerrada azul.png"
     ],
     "asar": true,
     "win": {
