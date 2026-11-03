@@ -28,7 +28,10 @@
       "1 ROSA.png",
       "AZUL.png",
       "boca cerrada rosa.png",
-      "boca cerrada azul.png"
+      "boca cerrada azul.png",
+      "frasco rojo.png",
+      "frasco azul.png",
+      "pelotas de colores.png"
     ],
     "asar": true,
     "win": {
