@@ -94,41 +94,34 @@ function drawArtwork(openImg,closedImg,x,y,w,h,flip,pressAt){
  const pulse=elapsed<130?elapsed/130:elapsed<390?1-(elapsed-130)/260:0;
  const img=(pulse>0.28&&closedImg.complete&&closedImg.naturalWidth)?closedImg:openImg;
  if(!img.complete||!img.naturalWidth)return false;
- const extra=Math.max(0,Math.min(1,pulse))*145;
- const dw=w+extra, dh=h;
+ // Mantener la ilustración original sin estirarla ni dibujar rayas sobre el personaje.
  ctx.save();
- // El hipopótamo izquierdo se extiende hacia la derecha y el derecho hacia la izquierda.
- const dx=(x>500)?x-extra:x;
- ctx.drawImage(img,dx,y,dw,dh);
+ ctx.drawImage(img,x,y,w,h);
  ctx.restore();return true;
 }
-let balls=[],flyBalls=[],scores=[0,0],tubeBalls=[0,0],time=60,playing=false,ends=0,heads=[0,0],last=0,wind=0,windUntil=0,goldUntil=0,lastGold=0,marqueeX=1100,capturingKey=0,settings={duration:60,goldChance:.22,goldLife:3,windEnabled:true,musicEnabled:false,sfxEnabled:true,musicVolume:35,sfxVolume:75,customMusic:null,customSounds:{},marqueeText:'¡COME MÁS RÁPIDO!',marqueeSpeed:4,keyP1:' ',keyP2:'Enter'};
+let balls=[],flyBalls=[],scores=[0,0],tubeBalls=[0,0],jarContents=[[],[]],time=60,playing=false,ends=0,heads=[0,0],last=0,wind=0,windUntil=0,goldUntil=0,lastGold=0,marqueeX=1100,capturingKey=0,settings={duration:60,goldChance:.22,goldLife:3,windEnabled:true,musicEnabled:false,sfxEnabled:true,musicVolume:35,sfxVolume:75,customMusic:null,customSounds:{},marqueeText:'¡COME MÁS RÁPIDO!',marqueeSpeed:4,keyP1:' ',keyP2:'Enter'};
 const teamColors={red:'#ff405b',blue:'#12c9ff'};
 function randomTeam(){return Math.random()<.5?'red':'blue'}
 function ballColor(team){return teamColors[team]||teamColors.red}
-function reset(){balls=[];flyBalls=[];for(let i=0;i<30;i++){const team=randomTeam();balls.push({x:150+Math.random()*800,y:90+Math.random()*440,r:10+Math.random()*5,color:ballColor(team),team,vx:(Math.random()-.5)*1.2,vy:(Math.random()-.5)*1.2,gold:false})}scores=[0,0];tubeBalls=[0,0];time=settings.duration;heads=[0,0];wind=0;goldUntil=0;lastGold=performance.now();updateUI()}
+function reset(){balls=[];flyBalls=[];jarContents=[[],[]];for(let i=0;i<30;i++){const team=randomTeam();balls.push({x:150+Math.random()*800,y:90+Math.random()*440,r:10+Math.random()*5,color:ballColor(team),team,vx:(Math.random()-.5)*1.2,vy:(Math.random()-.5)*1.2,gold:false})}scores=[0,0];tubeBalls=[0,0];time=settings.duration;heads=[0,0];wind=0;goldUntil=0;lastGold=performance.now();updateUI()}
 function updateUI(){$('s1').textContent=String(scores[0]).padStart(2,'0');$('s2').textContent=String(scores[1]).padStart(2,'0');$('timer').textContent=time}
 function eat(i){
  if(!playing)return;
  heads[i]=performance.now();playSound('launch');
- const myTeam=i===0?'red':'blue';
- // Siempre tomar hasta seis bolitas cercanas al hipopótamo; así el botón nunca falla por distancia.
- const mouthX=i===0?330:770;
- const candidates=balls.map((b,n)=>({n,d:Math.hypot(b.x-mouthX,b.y-310)}))
+ const team=i===0?'red':'blue', destination=i===0?45:1055, now=performance.now();
+ // Solo se recogen bolitas del color del jugador y las doradas. Las del rival permanecen en la arena.
+ const eligible=balls.map((ball,index)=>({ball,index,d:Math.hypot(ball.x-(i===0?330:770),ball.y-390)}))
+   .filter(v=>v.ball.gold||v.ball.team===team)
    .sort((a,b)=>a.d-b.d).slice(0,6);
  let gained=0,stored=0;
- for(const item of candidates){
-   const b=balls[item.n];if(!b)continue;
-   if(b.gold){
-     gained+=5;playSound('gold');
-     flyBalls.push({fromX:b.x,fromY:b.y,toX:i===0?45:1055,toY:500,r:Math.max(13,b.r),color:'#ffd83d',gold:true,start:performance.now(),duration:1050});
-   }else if(b.team===myTeam){
-     gained++;stored++;
-     flyBalls.push({fromX:b.x,fromY:b.y,toX:i===0?45:1055,toY:500,r:Math.max(13,b.r),color:b.color,gold:false,start:performance.now(),duration:1150});
-   }
-   balls[item.n]=null;
+ const remove=new Set();
+ for(const item of eligible){
+   const ball=item.ball;remove.add(item.index);
+   if(ball.gold){gained+=5;playSound('gold');}
+   else {gained++;stored++;jarContents[i].push(ball.color);}
+   flyBalls.push({fromX:ball.x,fromY:ball.y,toX:destination,toY:455,r:Math.max(12,ball.r),color:ball.gold?'#ffd83d':ball.color,gold:!!ball.gold,start:now,duration:900});
  }
- balls=balls.filter(Boolean);
+ balls=balls.filter((ball,index)=>!remove.has(index));
  if(gained===0)playSound('miss');else playSound('catch');
  scores[i]+=gained;tubeBalls[i]+=stored;
  while(balls.length<30)spawnBall();
@@ -137,18 +130,28 @@ function eat(i){
 function spawnBall(){const team=randomTeam();balls.push({x:260+Math.random()*580,y:35,r:11+Math.random()*5,color:ballColor(team),team,vx:(Math.random()-.5)*1.4,vy:1+Math.random()*1.5,gold:false})}
 function playSound(type){if(!settings.sfxEnabled)return;try{if(settings.customSounds&&settings.customSounds[type]){const a=new Audio(settings.customSounds[type]);a.volume=settings.sfxVolume/100;a.play().catch(()=>{});return;}const ac=new (window.AudioContext||window.webkitAudioContext)(),o=ac.createOscillator(),g=ac.createGain();o.connect(g);g.connect(ac.destination);const patterns={launch:[260,.09,'sawtooth'],catch:[620,.12,'sine'],gold:[980,.3,'triangle'],wind:[180,.25,'sawtooth'],win:[740,.45,'triangle'],miss:[130,.1,'square']};const p=patterns[type]||patterns.catch;o.frequency.setValueAtTime(p[0],ac.currentTime);if(type==='gold'||type==='win')o.frequency.exponentialRampToValueAtTime(p[0]*1.7,ac.currentTime+p[1]);g.gain.setValueAtTime((settings.sfxVolume/100)*.18,ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+p[1]);o.type=p[2];o.start();o.stop(ac.currentTime+p[1]);setTimeout(()=>ac.close(),700)}catch(e){}}
 function drawTube(x,color,count,flip){
- const art=flip?jarBlueArt:jarRedArt;
+ const index=flip?1:0,art=flip?jarBlueArt:jarRedArt;
  if(art.complete&&art.naturalWidth){
-   const w=150,h=390,dx=flip?x-w/2:x-w/2;
-   ctx.save();ctx.shadowColor=color;ctx.shadowBlur=14;
-   ctx.drawImage(art,dx,112,w,h);ctx.restore();
-   ctx.save();ctx.fillStyle='#fff';ctx.font='1000 19px system-ui';ctx.textAlign='center';ctx.shadowColor=color;ctx.shadowBlur=12;ctx.fillText(String(count),x,530);ctx.restore();
-   return;
+   const w=150,h=390;
+   ctx.save();ctx.shadowColor=color;ctx.shadowBlur=14;ctx.drawImage(art,x-w/2,112,w,h);ctx.restore();
+ }else{
+   ctx.save();ctx.shadowColor=color;ctx.shadowBlur=18;ctx.fillStyle='#07152b99';ctx.strokeStyle=color;ctx.lineWidth=7;ctx.beginPath();ctx.roundRect(x-55,112,110,390,24);ctx.fill();ctx.stroke();ctx.restore();
  }
- ctx.save();ctx.shadowColor=color;ctx.shadowBlur=18;ctx.fillStyle='#07152b99';ctx.strokeStyle=color;ctx.lineWidth=7;ctx.beginPath();ctx.roundRect(x-25,115,50,390,24);ctx.fill();ctx.stroke();ctx.shadowBlur=0;ctx.fillStyle='#ffffff20';ctx.fillRect(x-15,125,8,365);for(let i=0;i<Math.min(count,14);i++){const yy=485-i*24;ctx.fillStyle=color;ctx.shadowColor=color;ctx.shadowBlur=12;ctx.beginPath();ctx.arc(x,yy,9,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;ctx.fillStyle='#ffffffaa';ctx.beginPath();ctx.arc(x-3,yy-3,2.5,0,Math.PI*2);ctx.fill()}ctx.shadowBlur=0;ctx.fillStyle='#fff';ctx.font='900 17px system-ui';ctx.textAlign='center';ctx.fillText(count+'',x,535);ctx.restore()}
-function drawHippo(x,y,color,flip,open){ctx.save();ctx.translate(x,y);if(flip)ctx.scale(-1,1);const elapsed=open?Math.max(0,performance.now()-open):9999;const pulse=elapsed<150?elapsed/150:elapsed<390?1-(elapsed-150)/240:0;const stretch=Math.max(0,Math.min(1,pulse))*260;ctx.shadowColor=color;ctx.shadowBlur=25;ctx.fillStyle=color;ctx.strokeStyle='#07142d';ctx.lineWidth=15;ctx.lineCap='round';ctx.lineJoin='round';
-ctx.beginPath();ctx.moveTo(25,-35);ctx.bezierCurveTo(65+stretch*.35,-50,100+stretch*.65,-28,135+stretch,-8);ctx.lineTo(135+stretch,55);ctx.bezierCurveTo(85+stretch*.55,75,45+stretch*.25,65,10,45);ctx.closePath();ctx.fill();ctx.stroke();ctx.shadowBlur=0;
-ctx.fillStyle=color;ctx.beginPath();ctx.ellipse(0,0,112,96,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+ // Bolitas almacenadas, visibles dentro del cuerpo del frasco.
+ ctx.save();
+ ctx.beginPath();ctx.rect(x-48,150,96,330);ctx.clip();
+ const stored=jarContents[index]||[];
+ const maxVisible=48;
+ stored.slice(-maxVisible).forEach((c,n)=>{
+   const col=n%4,row=Math.floor(n/4);
+   const bx=x-30+col*20,by=465-row*22;
+   ctx.shadowColor=c;ctx.shadowBlur=10;ctx.fillStyle=c;ctx.beginPath();ctx.arc(bx,by,8,0,Math.PI*2);ctx.fill();
+   ctx.shadowBlur=0;ctx.fillStyle='#ffffffcc';ctx.beginPath();ctx.arc(bx-2.5,by-2.5,2.5,0,Math.PI*2);ctx.fill();
+ });
+ ctx.restore();
+ ctx.save();ctx.fillStyle='#fff';ctx.font='1000 19px system-ui';ctx.textAlign='center';ctx.shadowColor=color;ctx.shadowBlur=12;ctx.fillText(String(count),x,530);ctx.restore();
+}
+function drawHippo(x,y,color,flip,open){ctx.save();ctx.translate(x,y);if(flip)ctx.scale(-1,1);ctx.shadowColor=color;ctx.shadowBlur=25;ctx.fillStyle=color;ctx.strokeStyle='#07142d';ctx.lineWidth=15;ctx.lineCap='round';ctx.lineJoin='round';
 ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(-22,-34,27,31,0,0,Math.PI*2);ctx.ellipse(32,-36,27,31,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#10203d';ctx.beginPath();ctx.arc(-15,-31,12,0,Math.PI*2);ctx.arc(38,-32,12,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(-19,-36,4,0,Math.PI*2);ctx.arc(34,-37,4,0,Math.PI*2);ctx.fill();
 ctx.fillStyle='#ffb6c2';ctx.beginPath();ctx.ellipse(24,35,76,open?47:34,0,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle='#15213d';ctx.beginPath();ctx.ellipse(-32,48,13,9,0,0,Math.PI*2);ctx.ellipse(78,48,13,9,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.font='900 19px system-ui';ctx.textAlign='center';ctx.fillText(flip?'2':'1',0,133);ctx.restore()}
 function draw(t){ctx.clearRect(0,0,1100,620);
@@ -169,7 +172,7 @@ const nowFly=performance.now();flyBalls=flyBalls.filter(f=>nowFly-f.start<f.dura
 for(const f of flyBalls){
  const p=Math.min(1,(nowFly-f.start)/f.duration),ease=p*p*(3-2*p);
  const xx=f.fromX+(f.toX-f.fromX)*ease;
- const yy=f.fromY+(f.toY-f.fromY)*ease+24*Math.sin(Math.PI*p);
+ const yy=f.fromY+(f.toY-f.fromY)*ease+18*p;
  ctx.save();ctx.globalAlpha=p>.92?Math.max(0,(1-p)/.08):1;
  ctx.shadowColor=f.gold?'#ffe45c':f.color;ctx.shadowBlur=26;
  ctx.fillStyle=f.color;ctx.strokeStyle='#ffffff';ctx.lineWidth=4;
