@@ -117,7 +117,7 @@ balls=balls.filter(b=>!b.gold||performance.now()<b.expires);
 for(let b of balls){b.x+=b.vx+(playing&&settings.windEnabled?wind*.35:0);b.y+=b.vy;if(b.x<80||b.x>1020)b.vx*=-1;if(b.y<40||b.y>570){b.y=45;b.vy=1+Math.random()*1.5}ctx.shadowColor=b.gold?'#ffdc32':b.color;ctx.shadowBlur=b.gold?30:17;let gr=ctx.createRadialGradient(b.x-5,b.y-6,1,b.x,b.y,b.r);gr.addColorStop(0,'#fff');gr.addColorStop(.25,b.gold?'#fff3a0':b.color);gr.addColorStop(1,b.gold?'#d58b00':'#17406c');ctx.fillStyle=gr;ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);ctx.fill();if(b.gold){ctx.fillStyle='#fff';ctx.font='bold 13px system-ui';ctx.textAlign='center';ctx.fillText('★',b.x,b.y+5)}ctx.shadowBlur=0}
 drawTube(45,'#ff4967',tubeBalls[0],false);drawTube(1055,'#20d8ff',tubeBalls[1],true);
 const redShown=drawArtwork(hippoRedArt,28,250,420,330,false,heads[0]);if(!redShown)drawHippo(150,315,'#ff405b',false,heads[0]);
-const blueShown=drawArtwork(hippoBlueArt,652,250,420,330,true,heads[1]);if(!blueShown)drawHippo(950,315,'#12c9ff',true,heads[1]);
+const blueShown=drawArtwork(hippoBlueArt,652,250,420,330,false,heads[1]);if(!blueShown)drawHippo(950,315,'#12c9ff',true,heads[1]);
 ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='1000 34px system-ui';ctx.shadowColor='#ffe45c';ctx.shadowBlur=18;ctx.fillText('¡A COMER!',550,72);ctx.shadowBlur=0;
 if(playing&&settings.windEnabled){ctx.font='900 18px system-ui';ctx.fillStyle='#c9f5ff';ctx.fillText('💨 VIENTO LOCO',550,565)}
 if(playing&&performance.now()<goldUntil&&balls.some(b=>b.gold)){ctx.fillStyle='#ffe36b';ctx.font='1000 27px system-ui';ctx.fillText('¡BOLITA DORADA! +5',550,112)}
