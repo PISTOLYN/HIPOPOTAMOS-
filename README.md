@@ -1,22 +1,32 @@
-# Hipopótamos Comiendo Bolitas — prototipo arcade
+# Hipopotamos Comiendo Bolitas
 
-Juego local para dos jugadores, hecho con HTML5 Canvas y JavaScript.
+Juego arcade para dos jugadores, empaquetado como aplicación de Windows con Electron.
 
-## Cómo abrir
-1. Descarga y descomprime el ZIP.
-2. Abre `index.html` con Chrome o Edge.
-3. Pulsa **COMENZAR PARTIDA**.
+## Instaladores
 
-## Controles
-- Jugador 1: ESPACIO o A; también botón rojo en pantalla.
-- Jugador 2: ENTER o L; también botón azul en pantalla.
-- ESC: pausa durante la partida.
+GitHub Actions crea dos instaladores NSIS:
+- **x64:** Windows 10 de 64 bits y Windows 11 de 64 bits.
+- **ia32:** Windows de 32 bits. También puede ejecutarse en Windows de 64 bits, aunque se recomienda x64.
 
-## Configuración
-El engrane permite elegir 30, 60, 90 o 120 segundos.
+Cada vez que se actualice la rama `main`, se ejecuta el flujo **Crear instaladores de Windows**.
 
-## Publicarlo en GitHub Pages
-Sube `index.html` y `README.md` a un repositorio y activa Settings → Pages → Deploy from a branch → `main` → `/ (root)`.
+## Descargar los instaladores
 
-## Nota
-Esta es una primera versión jugable/prototipo. Los hipopótamos y la arena están dibujados con Canvas; los controles físicos USB tipo teclado pueden funcionar si el dispositivo envía teclas configurables. Aún no incluye instalador EXE.
+1. Abre la pestaña **Actions** del repositorio.
+2. Entra al último flujo **Crear instaladores de Windows** que terminó correctamente (marca verde).
+3. En **Artifacts**, descarga `Hipopotamos-Windows-x64` o `Hipopotamos-Windows-ia32`.
+4. Descomprime el ZIP del artefacto y ejecuta el archivo `.exe`.
+
+## Probar localmente
+
+Requiere Node.js 22:
+- `npm install`
+- `npm start`
+
+Para compilar:
+- `npm run build:win64`
+- `npm run build:win32`
+
+## Nota de compatibilidad
+
+La compilación de 32 bits utiliza Electron 43. Electron anunció que la serie 43 será la última con binarios Windows de 32 bits; el soporte de esa serie termina en enero de 2027. La compilación x64 también usa Electron 43 para mantener versiones de motor coherentes. Actualizar a Electron 44 o posterior requiere retirar el instalador de 32 bits.
