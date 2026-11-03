@@ -26,10 +26,40 @@ canvas{width:100%;height:auto;display:block;border-radius:20px;background:radial
 .press{min-width:145px;font-size:13px;padding:12px}.press.red{background:linear-gradient(135deg,#ff526b,#b91d40)}.press.blue{background:linear-gradient(135deg,#21d4ff,#075bbd)}
 footer{text-align:center;color:#86a8d7;font-size:11px;margin-top:12px}
 @media(max-width:650px){.scores{gap:6px}.score{padding:8px}.name{font-size:11px}.controls{grid-template-columns:1fr}.control{padding:9px}.stage{padding:6px;border-radius:20px}}
+
+#settingsModal{position:fixed;inset:0;z-index:20;background:#020817dd;display:none;place-items:center;padding:16px}
+.settingsCard{width:min(760px,100%);max-height:90vh;overflow:auto;background:linear-gradient(145deg,#142d65,#07132e);border:2px solid #42caff;border-radius:22px;padding:22px;box-shadow:0 0 45px #00bfff66}
+.settingsHead{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}
+.settingsHead h2{margin:0;font-size:clamp(22px,4vw,32px)}
+.settingsGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.setting{background:#06132c;border:1px solid #ffffff22;border-radius:13px;padding:12px;display:grid;gap:7px}
+.setting label{font-weight:900;color:#c9e8ff;font-size:13px}
+.setting input[type=range]{width:100%;accent-color:#18caff}
+.setting input[type=number],.setting select{width:100%;padding:9px;border-radius:8px;background:#10295a;color:white;border:1px solid #5598e8}
+.setting input[type=file]{width:100%;font-size:11px;color:#c9e8ff}
+.setting small{color:#8db9e8}
+.settingActions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.settingActions button{flex:1}
+@media(max-width:600px){.settingsGrid{grid-template-columns:1fr}}
 </style>
 </head>
 <body><main class="app">
 <header><div><div class="sub">ARCADE • 2 JUGADORES</div><h1>HIPOPÓTAMOS <span>COMIENDO BOLITAS</span></h1></div><button class="topbtn" id="settings">⚙ CONFIGURACIÓN</button></header>
+<div id="settingsModal" role="dialog" aria-modal="true" aria-label="Configuración del juego">
+ <section class="settingsCard">
+  <div class="settingsHead"><h2>⚙ CONFIGURACIÓN DEL JUEGO</h2><button id="closeSettings" aria-label="Cerrar">✕</button></div>
+  <div class="settingsGrid">
+   <div class="setting"><label for="duration">⏱ Tiempo de partida</label><select id="duration"><option>30</option><option selected>60</option><option>90</option><option>120</option></select><small>Segundos por partida</small></div>
+   <div class="setting"><label for="goldChance">✨ Aparición de bolita dorada</label><select id="goldChance"><option value="0.12">Poco frecuente</option><option value="0.22" selected>Normal</option><option value="0.35">Frecuente</option></select></div>
+   <div class="setting"><label for="goldLife">⏳ Duración de bolita dorada</label><select id="goldLife"><option value="2">2 segundos</option><option value="3" selected>3 segundos</option><option value="5">5 segundos</option></select></div>
+   <div class="setting"><label for="windEnabled">💨 Viento loco</label><select id="windEnabled"><option value="yes" selected>Activado</option><option value="no">Desactivado</option></select></div>
+   <div class="setting"><label for="musicEnabled">🎵 Música de fondo</label><select id="musicEnabled"><option value="yes">Activada</option><option value="no" selected>Desactivada</option></select><input id="musicVolume" type="range" min="0" max="100" value="35"><small>Volumen de música</small><input id="musicFile" type="file" accept="audio/*"><small id="musicName">Música original del juego</small><button id="testMusic">▶ Probar música</button></div>
+   <div class="setting"><label for="sfxEnabled">🔊 Efectos de sonido</label><select id="sfxEnabled"><option value="yes" selected>Activados</option><option value="no">Desactivados</option></select><input id="sfxVolume" type="range" min="0" max="100" value="75"><small>Volumen de efectos</small><select id="soundChoice"><option value="catch">Sonido: Atrapar bolita</option><option value="launch">Sonido: Lanzar cuello</option><option value="gold">Sonido: Bolita dorada</option><option value="wind">Sonido: Viento loco</option><option value="win">Sonido: Victoria</option></select><input id="sfxFile" type="file" accept="audio/*"><small id="sfxName">Efectos originales del juego</small><button id="testSfx">▶ Probar efecto seleccionado</button></div>
+  </div>
+  <div class="settingActions"><button id="saveSettings" class="big">💾 GUARDAR CAMBIOS</button><button id="resetSettings">↺ RESTABLECER</button></div>
+  <p><small>Los archivos de audio personalizados y las opciones se guardan en este equipo.</small></p>
+ </section>
+</div>
 <section class="scores">
 <div class="score red"><span class="name">🔴 JUGADOR 1</span><span class="num" id="s1">00</span></div>
 <div class="timer" id="timer">60</div>
@@ -46,11 +76,13 @@ footer{text-align:center;color:#86a8d7;font-size:11px;margin-top:12px}
 </main>
 <script>
 const c=document.getElementById('game'),ctx=c.getContext('2d'),$=id=>document.getElementById(id);
-let balls=[],scores=[0,0],time=60,playing=false,ends=0,heads=[0,0],last=0,settings={duration:60};
+let balls=[],scores=[0,0],time=60,playing=false,ends=0,heads=[0,0],last=0,wind=0,windUntil=0,goldUntil=0,lastGold=0,settings={duration:60,goldChance:.22,goldLife:3,windEnabled:true,musicEnabled:false,sfxEnabled:true,musicVolume:35,sfxVolume:75,customMusic:null,customSfx:null};
 const colors=['#ffe34f','#ff4f79','#48f09a','#ff9d35','#72e7ff','#d77cff'];
-function reset(){balls=[];for(let i=0;i<30;i++)balls.push({x:150+Math.random()*800,y:90+Math.random()*440,r:10+Math.random()*5,color:colors[i%colors.length],vx:(Math.random()-.5)*1.2,vy:(Math.random()-.5)*1.2});scores=[0,0];time=settings.duration;heads=[0,0];updateUI()}
+function reset(){balls=[];for(let i=0;i<30;i++)balls.push({x:150+Math.random()*800,y:90+Math.random()*440,r:10+Math.random()*5,color:colors[i%colors.length],vx:(Math.random()-.5)*1.2,vy:(Math.random()-.5)*1.2,gold:false});scores=[0,0];time=settings.duration;heads=[0,0];wind=0;goldUntil=0;lastGold=performance.now();updateUI()}
 function updateUI(){$('s1').textContent=String(scores[0]).padStart(2,'0');$('s2').textContent=String(scores[1]).padStart(2,'0');$('timer').textContent=time}
-function eat(i){if(!playing)return;heads[i]=1;let hipX=i===0?170:930,hipY=310;let candidates=balls.map((b,n)=>({n,d:Math.hypot(b.x-hipX,b.y-hipY)})).sort((a,b)=>a.d-b.d).slice(0,3);let eaten=0;for(let item of candidates){if(item.d<360&&balls[item.n]){balls.splice(item.n,1);scores[i]++;eaten++;}}if(eaten===0){let b=balls.shift();if(b){scores[i]++;}}while(balls.length<30)balls.push({x:350+Math.random()*400,y:100+Math.random()*420,r:12,color:colors[Math.floor(Math.random()*colors.length)],vx:(Math.random()-.5)*2,vy:(Math.random()-.5)*2});updateUI();setTimeout(()=>heads[i]=0,180)}
+function eat(i){if(!playing)return;heads[i]=1;playSound('launch');let mouthX=i===0?320:780;let candidates=balls.map((b,n)=>({n,d:Math.hypot(b.x-mouthX,b.y-310)})).filter(o=>o.d<235).sort((a,b)=>a.d-b.d).slice(0,4);let gained=0;for(const item of candidates){const b=balls[item.n];if(!b)continue;gained+=b.gold?5:1;if(b.gold)playSound('gold');balls[item.n]=null;}balls=balls.filter(Boolean);if(gained===0)playSound('miss');else playSound('catch');scores[i]+=gained;while(balls.length<30)spawnBall();updateUI();setTimeout(()=>heads[i]=0,260)}
+function spawnBall(){balls.push({x:260+Math.random()*580,y:35,r:11+Math.random()*5,color:colors[Math.floor(Math.random()*colors.length)],vx:(Math.random()-.5)*1.4,vy:1+Math.random()*1.5,gold:false})}
+function playSound(type){if(!settings.sfxEnabled)return;try{if(settings.customSfx){const a=new Audio(settings.customSfx);a.volume=settings.sfxVolume/100;a.play().catch(()=>{});return;}const ac=new (window.AudioContext||window.webkitAudioContext)(),o=ac.createOscillator(),g=ac.createGain();o.connect(g);g.connect(ac.destination);const patterns={launch:[260,.09,'sawtooth'],catch:[620,.12,'sine'],gold:[980,.3,'triangle'],wind:[180,.25,'sawtooth'],win:[740,.45,'triangle'],miss:[130,.1,'square']};const p=patterns[type]||patterns.catch;o.frequency.setValueAtTime(p[0],ac.currentTime);if(type==='gold'||type==='win')o.frequency.exponentialRampToValueAtTime(p[0]*1.7,ac.currentTime+p[1]);g.gain.setValueAtTime((settings.sfxVolume/100)*.18,ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+p[1]);o.type=p[2];o.start();o.stop(ac.currentTime+p[1]);setTimeout(()=>ac.close(),700)}catch(e){}}
 function drawHippo(x,y,color,flip,open){ctx.save();ctx.translate(x,y);if(flip)ctx.scale(-1,1);
 ctx.shadowColor=color;ctx.shadowBlur=22;ctx.fillStyle=color;ctx.strokeStyle='#07142d';ctx.lineWidth=12;
 ctx.beginPath();ctx.ellipse(0,0,105,88,0,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.shadowBlur=0;
@@ -62,15 +94,30 @@ ctx.fillStyle='#fff';ctx.font='bold 22px system-ui';ctx.textAlign='center';ctx.f
 function draw(t){ctx.clearRect(0,0,1100,620);
 let g=ctx.createRadialGradient(550,310,40,550,310,580);g.addColorStop(0,'#19a9e9');g.addColorStop(1,'#063b80');ctx.fillStyle=g;ctx.fillRect(0,0,1100,620);
 ctx.strokeStyle='#9beaff';ctx.lineWidth=9;ctx.globalAlpha=.5;ctx.beginPath();ctx.ellipse(550,310,460,255,0,0,7);ctx.stroke();ctx.globalAlpha=1;
-for(let b of balls){b.x+=b.vx;b.y+=b.vy;if(b.x<45||b.x>1055)b.vx*=-1;if(b.y<35||b.y>585)b.vy*=-1;ctx.shadowColor=b.color;ctx.shadowBlur=15;let gr=ctx.createRadialGradient(b.x-4,b.y-5,1,b.x,b.y,b.r);gr.addColorStop(0,'#fff');gr.addColorStop(.25,b.color);gr.addColorStop(1,'#17406c');ctx.fillStyle=gr;ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,7);ctx.fill();ctx.shadowBlur=0}
-drawHippo(150,310,'#ff405b',false,heads[0]);drawHippo(950,310,'#12c9ff',true,heads[1]);
+if(playing&&settings.windEnabled&&performance.now()>windUntil){wind=(Math.random()-.5)*2.8;windUntil=performance.now()+3500+Math.random()*2500;playSound('wind')}
+if(playing&&performance.now()-lastGold>1800&&Math.random()<settings.goldChance/10){balls.push({x:350+Math.random()*400,y:55,r:17,color:'#ffd83d',vx:(Math.random()-.5)*1.5,vy:1.5,gold:true});lastGold=performance.now();goldUntil=performance.now()+settings.goldLife*1000}
+for(let b of balls){b.x+=b.vx+(playing&&settings.windEnabled?wind*.35:0);b.y+=b.vy;if(b.x<45||b.x>1055)b.vx*=-1;if(b.y<35||b.y>585){b.y=40;b.vy=1+Math.random()*1.5}ctx.shadowColor=b.gold?'#ffdc32':b.color;ctx.shadowBlur=b.gold?30:15;let gr=ctx.createRadialGradient(b.x-4,b.y-5,1,b.x,b.y,b.r);gr.addColorStop(0,'#fff');gr.addColorStop(.25,b.gold?'#fff3a0':b.color);gr.addColorStop(1,b.gold?'#d58b00':'#17406c');ctx.fillStyle=gr;ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,7);ctx.fill();if(b.gold){ctx.fillStyle='#fff';ctx.font='bold 13px system-ui';ctx.fillText('★',b.x,b.y+5)}ctx.shadowBlur=0}
+if(playing&&settings.windEnabled){ctx.fillStyle='#ffffffaa';ctx.font='bold 18px system-ui';ctx.textAlign='center';ctx.fillText('💨 VIENTO LOCO',550,585)}
+if(playing&&performance.now()<goldUntil&&balls.some(b=>b.gold)){ctx.fillStyle='#ffe36b';ctx.font='900 26px system-ui';ctx.textAlign='center';ctx.fillText('¡BOLITA DORADA! +5',550,85)}
+drawHippo(150+heads[0]*105,310,'#ff405b',false,heads[0]);drawHippo(950-heads[1]*105,310,'#12c9ff',true,heads[1]);
 ctx.fillStyle='#ffffff22';ctx.fillRect(525,35,50,550);ctx.fillStyle='#fff';ctx.font='900 22px system-ui';ctx.textAlign='center';ctx.fillText('¡A COMER!',550,40);
 if(playing){let now=performance.now();if(now-last>=1000){time--;last=now;updateUI();if(time<=0)finish()}}
 requestAnimationFrame(draw)}
-function finish(){playing=false;let winner=scores[0]===scores[1]?'¡EMPATE!':scores[0]>scores[1]?'¡GANA JUGADOR 1!':'¡GANA JUGADOR 2!';$('overlay').innerHTML=`<div class="panel"><div class="sub">FIN DE LA PARTIDA</div><h2>${winner}</h2><p>🔴 ${scores[0]} bolitas &nbsp; VS &nbsp; 🔵 ${scores[1]} bolitas</p><button class="big" id="again">↻ JUGAR OTRA VEZ</button></div>`;$('overlay').style.display='grid';$('again').onclick=startGame}
+function finish(){playing=false;playSound(scores[0]===scores[1]?'catch':'win');let winner=scores[0]===scores[1]?'¡EMPATE!':scores[0]>scores[1]?'¡GANA JUGADOR 1!':'¡GANA JUGADOR 2!';$('overlay').innerHTML=`<div class="panel"><div class="sub">FIN DE LA PARTIDA</div><h2>${winner}</h2><p>🔴 ${scores[0]} bolitas &nbsp; VS &nbsp; 🔵 ${scores[1]} bolitas</p><button class="big" id="again">↻ JUGAR OTRA VEZ</button></div>`;$('overlay').style.display='grid';$('again').onclick=startGame}
 function startGame(){reset();playing=true;last=performance.now();$('overlay').style.display='none'}
 $('start').onclick=startGame;$('p1').onclick=()=>eat(0);$('p2').onclick=()=>eat(1);
 window.addEventListener('keydown',e=>{if(e.repeat)return;if([' ','a','A'].includes(e.key)){e.preventDefault();eat(0)}if(['Enter','l','L'].includes(e.key)){e.preventDefault();eat(1)}if(e.key==='Escape'&&playing){playing=false;$('overlay').style.display='grid';$('overlay').innerHTML='<div class="panel"><h2>PARTIDA EN PAUSA</h2><button class="big" id="resume">CONTINUAR</button></div>';$('resume').onclick=()=>{playing=true;last=performance.now();$('overlay').style.display='none'}}});
-$('settings').onclick=()=>{let v=prompt('Duración de la partida en segundos (30, 60, 90 o 120):',settings.duration);if(v!==null){let n=Number(v);if([30,60,90,120].includes(n)){settings.duration=n;time=n;updateUI()}else alert('Elige 30, 60, 90 o 120 segundos.')}};
+
+function loadSettings(){try{const saved=JSON.parse(localStorage.getItem('hipposSettings')||'{}');settings={...settings,...saved}}catch(e){}}
+function showSettings(){ $('duration').value=settings.duration;$('goldChance').value=String(settings.goldChance);$('goldLife').value=String(settings.goldLife);$('windEnabled').value=settings.windEnabled?'yes':'no';$('musicEnabled').value=settings.musicEnabled?'yes':'no';$('sfxEnabled').value=settings.sfxEnabled?'yes':'no';$('musicVolume').value=settings.musicVolume;$('sfxVolume').value=settings.sfxVolume;$('musicName').textContent=settings.customMusic?'Audio personalizado cargado':'Música original del juego';$('sfxName').textContent=settings.customSfx?'Audio personalizado cargado':'Efectos originales del juego';$('settingsModal').style.display='grid'}
+function saveSettings(){settings.duration=Number($('duration').value);settings.goldChance=Number($('goldChance').value);settings.goldLife=Number($('goldLife').value);settings.windEnabled=$('windEnabled').value==='yes';settings.musicEnabled=$('musicEnabled').value==='yes';settings.sfxEnabled=$('sfxEnabled').value==='yes';settings.musicVolume=Number($('musicVolume').value);settings.sfxVolume=Number($('sfxVolume').value);try{localStorage.setItem('hipposSettings',JSON.stringify(settings))}catch(e){alert('No se pudo guardar el audio personalizado. Prueba con un archivo más pequeño.')}if(!playing){time=settings.duration;updateUI()}$('settingsModal').style.display='none'}
+$('settings').onclick=showSettings;$('closeSettings').onclick=()=>$('settingsModal').style.display='none';$('saveSettings').onclick=saveSettings;
+$('resetSettings').onclick=()=>{settings={duration:60,goldChance:.22,goldLife:3,windEnabled:true,musicEnabled:false,sfxEnabled:true,musicVolume:35,sfxVolume:75,customMusic:null,customSfx:null};localStorage.removeItem('hipposSettings');showSettings()};
+$('musicFile').onchange=e=>{const f=e.target.files[0];if(f){const rd=new FileReader();rd.onload=()=>{settings.customMusic=rd.result;$('musicName').textContent=f.name};rd.readAsDataURL(f)}};
+$('sfxFile').onchange=e=>{const f=e.target.files[0];if(f){const rd=new FileReader();rd.onload=()=>{settings.customSfx=rd.result;$('sfxName').textContent=f.name};rd.readAsDataURL(f)}};
+$('testSfx').onclick=()=>playSound($('soundChoice').value);
+$('testMusic').onclick=()=>{if(settings.customMusic){const a=new Audio(settings.customMusic);a.volume=Number($('musicVolume').value)/100;a.play().catch(()=>{})}else playSound('win')};
+loadSettings();
+
 reset();requestAnimationFrame(draw);
 </script></body></html>
